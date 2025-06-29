@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
-import * as nodemailer from "nodemailer";
 import { ConfigService } from "@nestjs/config";
+import { Resend } from "resend";
 
 interface SendMailOptions {
   to: string;
@@ -11,31 +11,27 @@ interface SendMailOptions {
 
 @Injectable()
 export class MailService {
-  private readonly transporter: nodemailer.Transporter;
+  private readonly resend: Resend;
 
   constructor(private readonly configService: ConfigService) {
-    this.transporter = nodemailer.createTransport({
-      host: this.configService.get<string>("MAIL_HOST"),
-      port: this.configService.get<number>("MAIL_PORT"),
-      secure: this.configService.get<boolean>("MAIL_SECURE"), 
-      auth: {
-        user: this.configService.get<string>("MAIL_USER"),
-        pass: this.configService.get<string>("MAIL_PASSWORD"),
-      },
-    });
+    this.resend = new Resend(process.env.RESEND_KEY);
   }
 
   async sendMail(options: SendMailOptions): Promise<void> {
-    const mailOptions = {
-      from: this.configService.get<string>("MAIL_FROM"), 
-      to: options.to, 
-      subject: options.subject, 
-      text: options.text, 
-      html: options.html, 
-    };
-
     try {
-      await this.transporter.sendMail(mailOptions);
+      const response = await this.resend.emails.send({
+        from: process.env.MAIL_FROM,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        text: options.text,
+      });
+
+      if (response.error) {
+        console.error("Error sending with Resend:", response.error);
+        throw new Error("Failed to send email via Resend");
+      }
+
       console.log(`Email sent to ${options.to}`);
     } catch (error) {
       console.error("Error sending email:", error);
