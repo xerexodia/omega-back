@@ -5,10 +5,12 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  OneToOne,
 } from "typeorm";
 import { SSHKey } from "./ssh.entity";
 import { Filesystem } from "./filesystem.entity";
 import { Instance } from "./instance.entity";
+import { Wallet } from "./wallet.entity";
 
 @Entity({ name: "user" })
 export class User {
@@ -47,4 +49,7 @@ export class User {
 
   @OneToMany(() => Instance, (key) => key.id, { onDelete: "CASCADE" })
   instance: Instance;
+
+  @OneToOne(() => Wallet, (key) => key, { onDelete: "CASCADE" })
+  wallet: Wallet;
 }

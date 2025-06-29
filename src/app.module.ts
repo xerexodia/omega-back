@@ -19,6 +19,8 @@ import { Filesystem } from "./entities/filesystem.entity";
 import { FileSystemModule } from "./modules/fileSystem/filesystem.module";
 import { InstanceModule } from "./modules/instance/instance.module";
 import { Instance } from "./entities/instance.entity";
+import { WalletModule } from "./modules/wallet/wallet.module";
+import { Wallet } from "./entities/wallet.entity";
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -37,7 +39,7 @@ import { Instance } from "./entities/instance.entity";
       },
     }),
 
-    TypeOrmModule.forFeature([User,SSHKey,Filesystem,Instance]),
+    TypeOrmModule.forFeature([User, SSHKey, Filesystem, Instance, Wallet]),
 
     ServeStaticModule.forRoot({
       rootPath: STORAGE_CONFIG.LOCAL_STORAGE_PATH,
@@ -50,7 +52,8 @@ import { Instance } from "./entities/instance.entity";
     SeederModule,
     SSHKeyModule,
     InstanceModule,
-    FileSystemModule
+    FileSystemModule,
+    WalletModule,
   ],
 
   controllers: [AppController],

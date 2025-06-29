@@ -13,7 +13,7 @@ export default registerAs(
       password: process.env.DATABSE_PASSWORD,
       database: process.env.DATABASE_NAME,
       entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-      ssl: { rejectUnauthorized: false },
+      // ssl: { rejectUnauthorized: false },
       synchronize: true,
       logging: process.env.NODE_ENV === 'development',
       autoLoadEntities: process.env.NODE_ENV === 'development',

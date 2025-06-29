@@ -11,6 +11,7 @@ import { LoginDto, SignupDto, VerifyOtpDto } from "./authDTO";
 import { JwtService } from "@nestjs/jwt";
 import * as crypto from "crypto";
 import { MailService } from "../mail/mail.service";
+import { WalletService } from "../wallet/wallet.service";
 
 @Injectable()
 export class AuthService {
@@ -18,7 +19,8 @@ export class AuthService {
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
     private readonly jwtService: JwtService,
-    private readonly mailService: MailService
+    private readonly mailService: MailService,
+    private readonly walletService: WalletService
   ) {}
 
   private generateOtp(): string {
@@ -86,7 +88,7 @@ export class AuthService {
           message: "Username already taken",
         };
       }
-      currentUser.username = username
+      currentUser.username = username;
       await this.usersRepository.save(currentUser);
       return {
         available: true,
@@ -200,19 +202,32 @@ export class AuthService {
   }
 
   async getAuthenticatedUser(userId: number): Promise<Partial<User>> {
-    const user = await this.usersRepository.findOne({
-      where: { id: userId },
-    });
-    if (!user) {
-      throw new UnauthorizedException("User not found");
-    }
+    try {
+      const user = await this.usersRepository.findOne({
+        where: { id: userId },
+      });
+      if (!user) {
+        throw new UnauthorizedException("User not found");
+      }
 
-    return {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      token: user.token,
-      isVerified: user.isVerified,
-    };
+      let wallet = user.wallet;
+      if (!wallet) {
+        wallet = await this.walletService.createWallet(user.id);
+      }
+
+      return {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        token: user.token,
+        isVerified: user.isVerified,
+        //@ts-ignore
+        wallet: {
+          publicKey: wallet.publicKey,
+        },
+      };
+    } catch (error) {
+      console.error(error);
+    }
   }
 }
