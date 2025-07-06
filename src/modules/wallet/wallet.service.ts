@@ -197,4 +197,44 @@ export class WalletService {
     }
     return user;
   }
+
+  async depositSol(userId: number, amount: number): Promise<string> {
+  if (amount <= 0) {
+    throw new BadRequestException("Amount must be greater than 0");
+  }
+
+  const wallet = await this.findWalletByUserId(userId);
+  const recipientPubKey = new PublicKey(wallet.publicKey);
+
+  const serviceWalletSecret = process.env.SERVICE_WALLET_SECRET; 
+  if (!serviceWalletSecret) {
+    throw new Error("Missing SERVICE_WALLET_SECRET in env");
+  }
+
+  const serviceKeypair = Keypair.fromSecretKey(bs58.default.decode(serviceWalletSecret));
+  const senderPubKey = serviceKeypair.publicKey;
+
+  const lamports = Math.floor(amount * LAMPORTS_PER_SOL);
+
+  const transaction = new Transaction().add(
+    SystemProgram.transfer({
+      fromPubkey: senderPubKey,
+      toPubkey: recipientPubKey,
+      lamports,
+    })
+  );
+
+  const { blockhash } = await this.solanaConnection.getLatestBlockhash();
+  transaction.recentBlockhash = blockhash;
+  transaction.feePayer = senderPubKey;
+
+  transaction.sign(serviceKeypair);
+
+  const rawTransaction = transaction.serialize();
+  const signature = await this.solanaConnection.sendRawTransaction(rawTransaction);
+  await this.solanaConnection.confirmTransaction(signature, "confirmed");
+
+  return signature;
+}
+
 }
