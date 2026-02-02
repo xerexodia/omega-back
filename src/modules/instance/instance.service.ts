@@ -11,14 +11,14 @@ import { WalletService } from "../wallet/wallet.service";
 
 @Injectable()
 export class InstanceService {
-  private readonly token = process.env.LAMBDA_API_KEY;
+  private readonly userName = process.env.LAMBDA_API_KEY;
   private readonly YOUR_SERVICE_WALLET_ADDRESS =
     process.env.YOUR_SERVICE_WALLET_ADDRESS;
 
   constructor(
     @InjectRepository(Instance)
     private readonly instanceRepository: Repository<Instance>,
-    private readonly walletService: WalletService
+    private readonly walletService: WalletService,
   ) {}
 
   async launchInstance(user: User, dto: LaunchInstanceDto): Promise<any> {
@@ -41,7 +41,7 @@ export class InstanceService {
     await this.walletService.withdrawSol(
       user.id,
       this.YOUR_SERVICE_WALLET_ADDRESS,
-      sol
+      sol,
     );
 
     let instanceId: string;
@@ -51,10 +51,11 @@ export class InstanceService {
         "https://cloud.lambda.ai/api/v1/instance-operations/launch",
         lambdaPayload,
         {
-          headers: {
-            Authorization: `Bearer ${this.token}`,
+          auth: {
+            username: this.userName,
+            password: "",
           },
-        }
+        },
       );
 
       instanceId = data?.data?.instance_ids?.[0];
@@ -64,7 +65,7 @@ export class InstanceService {
     } catch (error) {
       // await this.walletService.depositSol(user.id, sol);
       throw new Error(
-        `Failed to launch instance. Funds refunded. Reason: ${error.message}`
+        `Failed to launch instance. Funds refunded. Reason: ${error.message}`,
       );
     }
 
@@ -93,27 +94,28 @@ export class InstanceService {
       const { data } = await axios.get(
         "https://cloud.lambda.ai/api/v1/instance-types",
         {
-          headers: {
-            Authorization: `Bearer ${this.token}`,
+          auth: {
+            username: this.userName,
+            password: "",
           },
-        }
+        },
       );
       return data.data;
     } catch (error: any) {
       console.error(
         "Error fetching instance types:",
-        error.response?.data || error.message
+        error.response?.data || error.message,
       );
       throw new Error("Failed to fetch instance types");
     }
   }
 
   private async getHourlyCostInSOL(
-    priceCents: number
+    priceCents: number,
   ): Promise<{ sol: number; lamports: number }> {
     const priceUSD = priceCents / 100;
     const res = await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd"
+      "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd",
     );
     const json = await res.json();
     const solUsdRate = json.solana.usd as number;
@@ -127,10 +129,11 @@ export class InstanceService {
       const { data } = await axios.get(
         `https://cloud.lambda.ai/api/v1/instances`,
         {
-          headers: {
-            Authorization: `Bearer ${this.token}`,
+          auth: {
+            username: this.userName,
+            password: "",
           },
-        }
+        },
       );
 
       const localinstances = await this.instanceRepository.find({
@@ -140,14 +143,14 @@ export class InstanceService {
       const lambdaIds = localinstances.map((fs) => fs.cloud_id);
 
       const userInstances = data.data.filter((fs: any) =>
-        lambdaIds.includes(fs.id)
+        lambdaIds.includes(fs.id),
       );
 
       return userInstances;
     } catch (error: any) {
       console.error(
         "❌ Error fetching instances:",
-        error.response?.data || error.message
+        error.response?.data || error.message,
       );
       throw new Error("Failed to fetch instances");
     }
@@ -159,10 +162,11 @@ export class InstanceService {
         "https://cloud.lambda.ai/api/v1/instance-operations/terminate",
         { instance_ids: ids },
         {
-          headers: {
-            Authorization: `Bearer ${this.token}`,
+          auth: {
+            username: this.userName,
+            password: "",
           },
-        }
+        },
       );
 
       await this.instanceRepository
@@ -177,14 +181,14 @@ export class InstanceService {
     } catch (error: any) {
       console.error(
         "❌ Error terminating instances:",
-        error.response?.data || error.message
+        error.response?.data || error.message,
       );
       throw new Error("Failed to terminate instances");
     }
   }
 
   private convertTagsArrayToObject(
-    tags: { key: string; value: string }[] = []
+    tags: { key: string; value: string }[] = [],
   ) {
     return tags.reduce((acc, tag) => {
       acc[tag.key] = tag.value;

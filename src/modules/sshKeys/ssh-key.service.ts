@@ -13,11 +13,11 @@ import { User } from "src/entities/user.entity";
 @Injectable()
 export class SSHKeyService {
   private readonly baseUrl = "https://cloud.lambda.ai/api/v1";
-  private readonly token = process.env.LAMBDA_API_KEY;
+  private readonly userName = process.env.LAMBDA_API_KEY;
 
   constructor(
     @InjectRepository(SSHKey)
-    private readonly sshKeyRepo: Repository<SSHKey>
+    private readonly sshKeyRepo: Repository<SSHKey>,
   ) {}
 
   async createKey(user: User, name: string) {
@@ -26,8 +26,11 @@ export class SSHKeyService {
         `${this.baseUrl}/ssh-keys`,
         { name },
         {
-          headers: { Authorization: `Bearer ${this.token}` },
-        }
+          auth: {
+            username: this.userName,
+            password: "",
+          },
+        },
       );
 
       const sshKey = this.sshKeyRepo.create({
@@ -42,7 +45,7 @@ export class SSHKeyService {
     } catch (error) {
       console.error("Error creating SSH key:", error?.response?.data || error);
       throw new BadRequestException(
-        error?.response?.data?.message || "Failed to create SSH key"
+        error?.response?.data?.message || "Failed to create SSH key",
       );
     }
   }
@@ -71,14 +74,17 @@ export class SSHKeyService {
       }
 
       await axios.delete(`${this.baseUrl}/ssh-keys/${sshKey.lambdaId}`, {
-        headers: { Authorization: `Bearer ${this.token}` },
+        auth: {
+          username: this.userName,
+          password: "",
+        },
       });
 
       await this.sshKeyRepo.delete({ id: Number(id) });
     } catch (error) {
       console.error("Error deleting SSH key:", error?.response?.data || error);
       throw new BadRequestException(
-        error?.response?.data?.message || "Failed to delete SSH key"
+        error?.response?.data?.message || "Failed to delete SSH key",
       );
     }
   }
